@@ -1,0 +1,20 @@
+image: python:3.11
+
+stages:
+  - test
+
+before_script:
+  - pip install --upgrade pip
+  - pip install -r requirements.txt
+  - pip install pytest
+
+test:
+  stage: test
+  script:
+    - pytest -v tests/
+  artifacts:
+    when: always
+    paths:
+      - .pytest_cache/
+    reports:
+      junit: report.xml
