@@ -19,6 +19,10 @@ A tool for retrieving and configuring LDAPS certificates for Passbolt. Automatic
   - The script uses `openssl s_client` to establish an SSL/TLS connection and retrieve the certificate chain
   - No OpenSSL configuration or certificates are required as the script handles the connection and certificate parsing
 - Python 3.6+ (only required for creating the virtual environment)
+- pip (Python package installer)
+  - Usually comes with Python 3.6+, but may need to be installed separately on some systems
+  - Required for installing Python dependencies
+  - In Docker environments, pip will be automatically installed using Python's built-in ensurepip module
 
 ### Python Package Requirements
 - cryptography package (installed automatically in the virtual environment)
@@ -37,16 +41,13 @@ chmod +x setup_python_env.sh
 ./setup_python_env.sh
 ```
 
-3. Activate the virtual environment:
-```shell
-source venv/bin/activate
-```
+This will create a virtual environment and install all required dependencies. The script will exit when complete.
 
 ## Usage
 
 ### Basic Usage
 
-1. Activate the virtual environment:
+1. First, activate the virtual environment in your shell:
 ```shell
 source venv/bin/activate
 ```
@@ -54,6 +55,11 @@ source venv/bin/activate
 2. Run the script with your LDAPS server:
 ```shell
 python3 ldaps_cert_chain_retriever.py --server your.ldaps.server
+```
+
+3. When you're done, you can deactivate the virtual environment:
+```shell
+deactivate
 ```
 
 ### Saving the Certificate Bundle
