@@ -17,12 +17,14 @@ A tool for retrieving and configuring LDAPS certificates for Passbolt. Automatic
 - [OpenSSL](https://www.openssl.org/) command-line tool
   - Usually available as package `openssl` in most Linux distributions and package managers
   - The script uses `openssl s_client` to establish an SSL/TLS connection and retrieve the certificate chain
-  - No OpenSSL configuration or certificates are required as the script handles the connection and certificate parsing
-- Python 3.6+ (only required for creating the virtual environment)
-- pip (Python package installer)
-  - Usually comes with Python 3.6+, but may need to be installed separately on some systems
-  - Required for installing Python dependencies
-  - In Docker environments, pip will be automatically installed using Python's built-in ensurepip module
+- Python 3.11 or higher
+  - Required for running the tool
+  - On Debian/Ubuntu, you may need to install the following additional packages:
+    ```bash
+    sudo apt-get install python3-venv python3-pip build-essential libssl-dev libffi-dev python3-dev
+    ```
+- Pip (Python package installer)
+  - The setup script will attempt to install pip if it is missing, but it is recommended to install it beforehand
 
 ### Python Package Requirements
 - cryptography package (installed automatically in the virtual environment)
@@ -37,11 +39,15 @@ chmod +x setup_python_env.sh
 ```
 
 2. Run the setup script:
+- This will create a virtual environment and install all required dependencies. The script will exit when complete.
 ```shell
 ./setup_python_env.sh
 ```
 
-This will create a virtual environment and install all required dependencies. The script will exit when complete.
+👉 After setup completes, you need to activate the virtual environment once per shell session before running the tool:
+```shell
+source venv/bin/activate
+```
 
 ## Usage
 
@@ -187,6 +193,73 @@ docker-compose restart passbolt
 > - Update the certificate bundle when it expires or is renewed
 > - Consider using Docker secrets for production environments
 
+## Running the Tool in a Dedicated Container
+
+You can also build and run this tool in a fully isolated container (without installing Python or dependencies on your host).
+
+A sample `Dockerfile` is provided in the repository.
+
+### Build the container:
+
+```shell
+docker build -t ldaps-cert-tool .
+```
+
+### Run the tool:
+
+```shell
+docker run --rm ldaps-cert-tool --server your.ldaps.server --debug
+```
+
+### Save the certificate bundle to a file:
+
+```shell
+docker run --rm -v $(pwd):/out ldaps-cert-tool --server your.ldaps.server --output /out/ldaps_bundle.crt
+```
+
+- The output bundle will appear in your current directory as `ldaps_bundle.crt`.
+- You can then use it with Passbolt as described above.
+
+
+## Using the Makefile (optional convenience)
+
+A `Makefile` is provided to simplify common operations:
+
+```
+make build                   # Build the Docker image
+make run SERVER=your.ldaps.server  # Run the tool interactively (prints certs to stdout)
+make save SERVER=your.ldaps.server # Save the certificate bundle to ./ldaps_bundle.crt
+make test                    # Run unit tests inside the container
+make help                    # Show help
+```
+
+### Build the container:
+
+```shell
+make build
+```
+
+### Run the tool:
+
+```shell
+make run SERVER=your.ldaps.server
+```
+
+### Save the certificate bundle to a file:
+
+```shell
+make save SERVER=your.ldaps.server
+```
+
+- The output bundle will appear in your current directory as `ldaps_bundle.crt`.
+- You can then use it with Passbolt as described above.
+
+### Run unit tests:
+
+```shell
+make test
+```
+
 ## Advanced Debugging
 
 ### Using ldapsearch
@@ -238,4 +311,3 @@ This project is licensed under the AGPL-3.0-or-later License.
 3. Commit your changes
 4. Push to the branch
 5. Create a new Pull Request
-
