@@ -1,6 +1,6 @@
 # Example Dockerfile for building an LDAPS Certificate Bundler container
 # Minimal, reproducible environment
-FROM python:3.11-slim
+FROM python:3.13.5-slim
 
 # Install system dependencies for cryptography and OpenSSL CLI
 RUN apt-get update && apt-get install -y \
