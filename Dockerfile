@@ -17,5 +17,9 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy rest of project files
 COPY . /app
 
+# Run as an unprivileged user (uid 1000) instead of root
+RUN useradd -U -u 1000 appuser && chown -R 1000:1000 /app
+USER 1000
+
 # Default command (can be overridden)
 ENTRYPOINT ["python", "ldaps_cert_chain_retriever.py"]

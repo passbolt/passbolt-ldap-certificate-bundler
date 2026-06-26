@@ -21,7 +21,7 @@ run:
 	@docker run --rm $(IMAGE_NAME) --server $(SERVER) --debug
 
 save:
-	@docker run --rm -v $(PWD):/out $(IMAGE_NAME) --server $(SERVER) --output /out/ldaps_bundle.crt
+	@docker run --rm --user $(shell id -u):$(shell id -g) -v $(PWD):/out $(IMAGE_NAME) --server $(SERVER) --output /out/ldaps_bundle.crt
 
 test:
 	@docker run --rm --entrypoint "" $(IMAGE_NAME) python -m pytest -v
