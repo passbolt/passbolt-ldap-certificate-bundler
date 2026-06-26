@@ -1,0 +1,36 @@
+# Version control
+.git
+.gitignore
+
+# Python virtual environments and caches
+venv/
+.pytest_cache/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Build artifacts and generated output
+report.html
+ldaps_bundle.crt
+build/
+dist/
+*.egg-info/
+
+# IDE and editor files
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# Environment variables
+.env
+.env.*
+
+# Container/CI files not needed inside the image
+.dockerignore
