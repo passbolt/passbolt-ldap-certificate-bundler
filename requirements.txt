@@ -1,5 +1,5 @@
 # Core dependencies
-cryptography>=44.0.0,<50.0.0  # For certificate handling and cryptography operations
+cryptography>=50.0.0,<51.0.0  # For certificate handling and cryptography operations
 
 # Development dependencies (optional)
 pytest==9.1.1  # For running tests
