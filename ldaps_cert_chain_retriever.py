@@ -32,7 +32,7 @@ from datetime import datetime
 from cryptography import x509
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import serialization
-from cryptography.exceptions import InvalidSignature
+from cryptography.exceptions import InvalidSignature, UnsupportedAlgorithm
 
 # ANSI color codes for better readability in terminal output
 class Colors:
@@ -57,12 +57,21 @@ def print_colored(message, color=Colors.ENDC):
 
 def is_self_signed(cert):
     """
-    Check if a certificate is self-signed by comparing issuer and subject.
+    Check if a certificate is genuinely self-signed: issuer and subject match
+    AND the certificate is signed by its own key.
 
     This is important for enterprise LDAP servers that often use self-signed
-    certificates for internal PKI.
+    certificates for internal PKI. Comparing names alone is not enough: a
+    certificate can claim issuer == subject without being signed by its own
+    key (CWE-295).
     """
-    return cert.issuer == cert.subject
+    if cert.issuer != cert.subject:
+        return False
+    try:
+        cert.verify_directly_issued_by(cert)
+        return True
+    except (InvalidSignature, ValueError, TypeError, UnsupportedAlgorithm):
+        return False
 
 def print_certificate_info(cert_data, is_root=False):
     """
@@ -100,7 +109,8 @@ def print_certificate_info(cert_data, is_root=False):
 
 def validate_certificate_chain(cert_ders):
     """
-    Validate the certificate chain is complete and properly ordered.
+    Validate the certificate chain is complete, properly ordered, and that
+    each certificate is cryptographically signed by the next one in the chain.
 
     Handles various certificate scenarios commonly found in enterprise LDAP setups:
     - Standard certificate chains from public CAs
@@ -119,10 +129,16 @@ def validate_certificate_chain(cert_ders):
                 for cert in cert_ders]
 
         # Check if single self-signed certificate
-        if len(certs) == 1 and is_self_signed(certs[0]):
-            return True, "Valid self-signed certificate"
+        if len(certs) == 1:
+            if is_self_signed(certs[0]):
+                return True, "Valid self-signed certificate"
+            if certs[0].issuer == certs[0].subject:
+                return False, "Certificate claims to be self-signed but its self-signature could not be verified"
+            # Not self-signed and nothing to verify it against, so do not
+            # claim the chain is valid
+            return True, "Single certificate retrieved; its issuer is not included so the chain could not be verified"
 
-        # Check if each certificate's issuer matches the subject of the next certificate
+        # Check each certificate is issued and signed by the next certificate
         for i in range(len(certs) - 1):
             cert = certs[i]
             issuer = certs[i + 1]
@@ -137,11 +153,27 @@ def validate_certificate_chain(cert_ders):
                     return True, f"Chain contains self-signed certificate at position {i}"
                 return False, f"Certificate chain broken at position {i}: issuer does not match next certificate's subject"
 
+            # Names line up; verify the signature actually chains (CWE-295).
+            # ValueError/TypeError here means the signature algorithm or key
+            # type is one the cryptography library cannot verify.
+            try:
+                cert.verify_directly_issued_by(issuer)
+            except InvalidSignature:
+                # Same tolerance as the name-mismatch branch above: servers
+                # sometimes send extra self-signed roots (e.g. old and renewed
+                # CA certificates with the same name)
+                if is_self_signed(cert):
+                    return True, f"Chain contains self-signed certificate at position {i}"
+                return False, f"Certificate chain broken at position {i}: certificate is not signed by the next certificate in the chain"
+            except (ValueError, TypeError, UnsupportedAlgorithm):
+                return False, (f"Certificate chain is properly ordered but the signature at position {i} "
+                               "could not be verified (unsupported signature algorithm or key type)")
+
         # Check if the last certificate is self-signed (root CA)
         if is_self_signed(certs[-1]):
-            return True, "Certificate chain is valid and ends with self-signed root CA"
+            return True, "Certificate chain is valid (signatures verified) and ends with self-signed root CA"
 
-        return True, "Certificate chain is valid and properly ordered"
+        return True, "Certificate chain is valid and properly ordered (signatures verified)"
 
     except Exception as e:
         return False, f"Error validating certificate chain: {str(e)}"
